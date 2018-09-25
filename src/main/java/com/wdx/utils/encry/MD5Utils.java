@@ -8,6 +8,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 描述：MD5加密工具类
+			MD5算法 哈希算法
+			MD5算法具有以下特点：
+				1、压缩性：任意长度的数据，算出的MD5值长度都是固定的。
+				2、容易计算：从原数据计算出MD5值很容易。
+				3、抗修改性：对原数据进行任何改动，哪怕只修改1个字节，所得到的MD5值都有很大区别。
+				4、强抗碰撞：已知原数据和其MD5值，想找到一个具有相同MD5值的数据（即伪造数据）是非常困难的。
+ * @author 80002888
+ * @date   2018年9月25日
+ */
 public class MD5Utils {
 	
 	private static Logger logger = LoggerFactory.getLogger(DESUtils.class);
@@ -16,18 +27,20 @@ public class MD5Utils {
 		String plaintext = new String("admin");
 		
 		System.out.println("原始：" + plaintext);
-		System.out.println("普通MD5后：" + MD5Utils.digest(plaintext));
- 
+		System.out.println("普通MD5后：" + digest(plaintext));
+		System.out.println("二次加密后：" + digest(digest(plaintext)));
+		
 		// 获取加盐后的MD5值
-		String ciphertext = MD5Utils.generate(plaintext);
+		String ciphertext = generate(plaintext);
 		System.out.println("加盐后MD5：" + ciphertext);
-		System.out.println("是否是同一字符串:" + MD5Utils.verify(plaintext, ciphertext));
+		System.out.println("是否是同一字符串:" + verify(plaintext, ciphertext));
 		
 		// 其中某次admin字符串的MD5值
 		String[] tempSalt = { "990d7310af91261f7e366045319f1990d86b15387d69ca57", "b42d96e86740f45a7079fa25159312b27b2337fd36e51b04", "172680a8e455f89e6f92ec1c82d023250011a94c30f0fa04" };
 		for (String temp : tempSalt) {
-			System.out.println("是否是同一字符串:" + MD5Utils.verify(plaintext, temp));
+			System.out.println("是否是同一字符串:" + verify(plaintext, temp));
 		}
+		
 	}
 	
 	/**
