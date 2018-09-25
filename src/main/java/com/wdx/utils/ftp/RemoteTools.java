@@ -6,7 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.wdx.utils.PropertiesUtils;
+import com.wdx.utils.file.PropertiesUtils;
 
 /**
  * 描述：远程工具类，ftp/sftp，使用RemoteTools.getRemoteTools()自动获取，使用完毕需要调用logout();

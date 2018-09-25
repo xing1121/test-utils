@@ -1,8 +1,13 @@
-package com.wdx.utils;
+package com.wdx.utils.exception;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
+/**
+ * 描述：异常工具类
+ * @author 80002888
+ * @date   2018年9月25日
+ */
 public class ExceptionUtil {
 	
 	/**

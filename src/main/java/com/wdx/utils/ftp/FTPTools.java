@@ -17,8 +17,8 @@ import org.apache.commons.net.ftp.FTPReply;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.wdx.utils.DateUtil;
-import com.wdx.utils.FileUtils;
+import com.wdx.utils.date.DateUtil;
+import com.wdx.utils.file.FileUtils;
 
 /**
  * 描述：FTP工具类，使用RemoteTools.getRemoteTools()自动获取
@@ -77,7 +77,7 @@ public class FTPTools extends RemoteTools {
             // 远程文件全路径
             String remoteFilePath = remoteFolderPath + "/" + fileName;
 			// 时间戳
-    		String dateStr = DateUtil.dateFomat(new Date(), DATE_STR_PATTERN);
+    		String dateStr = DateUtil.date2Str(new Date(), DATE_STR_PATTERN);
     		// 本地文件全路径
             String localFilePath = localFolderPath + "/" + dateStr + "-" + fileName;
             // 创建本地文件
@@ -160,7 +160,7 @@ public class FTPTools extends RemoteTools {
 					continue;
 				}
 				// 时间戳
-	    		String dateStr = DateUtil.dateFomat(new Date(), DATE_STR_PATTERN);
+	    		String dateStr = DateUtil.date2Str(new Date(), DATE_STR_PATTERN);
 	    		// 远程文件全路径
             	String remoteFilePath = remoteFolderPath + "/" + fileName;
             	// 本地文件全路径
@@ -235,7 +235,7 @@ public class FTPTools extends RemoteTools {
     		// 本地文件路径
     		String localFilePath = localFolderPath + "/" + fileName;
 			// 时间戳
-    		String dateStr = DateUtil.dateFomat(new Date(), DATE_STR_PATTERN);
+    		String dateStr = DateUtil.date2Str(new Date(), DATE_STR_PATTERN);
     		// 远程文件路径
     		String remoteFilePath = remoteFolderPath + "/" + dateStr + "-" + fileName;
     		// 验证本地文件是否存在
@@ -305,7 +305,7 @@ public class FTPTools extends RemoteTools {
     			// 本地文件路径
     			String localFilePath = localFolderPath + "/" + fileName;
     			// 时间戳
-    			String dateStr = DateUtil.dateFomat(new Date(), DATE_STR_PATTERN);
+    			String dateStr = DateUtil.date2Str(new Date(), DATE_STR_PATTERN);
     			// 远程文件路径
     			String remoteFilePath = remoteFolderPath + "/" + dateStr + "-" + fileName;
     			// 本地文件
@@ -361,7 +361,7 @@ public class FTPTools extends RemoteTools {
 			// 源文件全路径
             String remoteSourceFilePath = remoteSourceFolderPath + "/" + fileName;
             // 时间戳
-            String dateStr = DateUtil.dateFomat(new Date(), DATE_STR_PATTERN); 
+            String dateStr = DateUtil.date2Str(new Date(), DATE_STR_PATTERN); 
             // 目标文件全路径
             String remoteDestFilePath = remoteDestFolderPath + "/" + dateStr + "-" + fileName;
             // 创建远程目的文件夹
@@ -407,7 +407,7 @@ public class FTPTools extends RemoteTools {
 				// 源文件全路径
 	            String remoteSourceFilePath = remoteSourceFolderPath + "/" + fileName;
 	            // 时间戳
-	            String dateStr = DateUtil.dateFomat(new Date(), DATE_STR_PATTERN); 
+	            String dateStr = DateUtil.date2Str(new Date(), DATE_STR_PATTERN); 
 	            // 目标文件全路径
 	            String remoteDestFilePath = remoteDestFolderPath + "/" + dateStr + "-" + fileName;
 	            // 移动

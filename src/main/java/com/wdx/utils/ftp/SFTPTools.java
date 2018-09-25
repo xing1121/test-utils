@@ -19,8 +19,8 @@ import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
-import com.wdx.utils.DateUtil;
-import com.wdx.utils.FileUtils;
+import com.wdx.utils.date.DateUtil;
+import com.wdx.utils.file.FileUtils;
 
 /**
  * 描述：SFTP工具类，使用RemoteTools.getRemoteTools()自动获取
@@ -60,7 +60,7 @@ public class SFTPTools extends RemoteTools{
     			return null;
 			}
     		// 时间戳备份
-    		String dateStr = DateUtil.dateFomat(new Date(), DATE_STR_PATTERN); 
+    		String dateStr = DateUtil.date2Str(new Date(), DATE_STR_PATTERN); 
     		String localFilePath = localFolderPath + "/" + dateStr + "-" + fileName;
     		String remoteFilePath = remoteFolderPath + "/" + fileName;
     		// 验证远程文件夹是否存在，不存在则创建
@@ -141,7 +141,7 @@ public class SFTPTools extends RemoteTools{
 			List<String> localFilePaths = new ArrayList<>();
 			for (String fileName : fileNames) {
 				// 时间戳
-	    		String dateStr = DateUtil.dateFomat(new Date(), DATE_STR_PATTERN); 
+	    		String dateStr = DateUtil.date2Str(new Date(), DATE_STR_PATTERN); 
 	    		String localFilePath = localFolderPath + "/" + dateStr + "-" + fileName;
 	    		String remoteFilePath = remoteFolderPath + "/" + fileName;
 	    		// 验证远程文件路径是否是文件夹
@@ -234,7 +234,7 @@ public class SFTPTools extends RemoteTools{
 			}
     		String localFilePath = localFolderPath + "/" + fileName;
 			// 时间戳
-    		String dateStr = DateUtil.dateFomat(new Date(), DATE_STR_PATTERN); 
+    		String dateStr = DateUtil.date2Str(new Date(), DATE_STR_PATTERN); 
     		String remoteFilePath = remoteFolderPath + "/" + dateStr + "-" + fileName;
     		// 验证本地文件是否存在
     		File localFile = new File(localFilePath);
@@ -308,7 +308,7 @@ public class SFTPTools extends RemoteTools{
 			List<String> remoteFilePaths = new ArrayList<>();
 			for (String fileName : fileNames) {
 				// 时间戳
-				String dateStr = DateUtil.dateFomat(new Date(), DATE_STR_PATTERN); 
+				String dateStr = DateUtil.date2Str(new Date(), DATE_STR_PATTERN); 
 				String localFilePath = localFolderPath + "/" + fileName;
 	    		String remoteFilePath = remoteFolderPath + "/" + dateStr + "-" + fileName;
 	    		// 验证本地文件是否存在
@@ -369,7 +369,7 @@ public class SFTPTools extends RemoteTools{
     			return null;
 			}
     		// 时间戳
-    		String dateStr = DateUtil.dateFomat(new Date(), "yyyyMMddHHmmss");
+    		String dateStr = DateUtil.date2Str(new Date(), "yyyyMMddHHmmss");
     		String remoteSourceFilePath = remoteSourceFolderPath + "/" + fileName;
     		String remoteDestFilePath = remoteDestFolderPath + "/" + dateStr + "-" + fileName;
     		// 验证远程源文件夹是否存在，不存在则创建
@@ -423,7 +423,7 @@ public class SFTPTools extends RemoteTools{
     			return null;
 			}
 			// 时间戳
-			String dateStr = DateUtil.dateFomat(new Date(), "yyyyMMddHHmmss");
+			String dateStr = DateUtil.date2Str(new Date(), "yyyyMMddHHmmss");
 			// 结果
 			List<String> remoteDestFilePaths = new ArrayList<>();
 			// 验证远程源文件夹是否存在，不存在则创建

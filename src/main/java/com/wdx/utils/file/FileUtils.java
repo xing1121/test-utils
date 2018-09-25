@@ -1,4 +1,4 @@
-package com.wdx.utils;
+package com.wdx.utils.file;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -19,11 +19,18 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 描述：文件工具类
+ * @author 80002888
+ * @date   2018年9月25日
+ */
 public class FileUtils {
 
 	private final static Logger logger = LoggerFactory.getLogger(FileUtils.class);
-	
 
+	/**
+	 * 失败尝试次数
+	 */
 	private static final Integer DEL_FAILED_MAX_TIME = 10;
 	
 	/**

@@ -1,5 +1,7 @@
 package com.wdx.utils.redis;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -15,8 +17,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.wdx.utils.ListUtil;
-import com.wdx.utils.PropertiesUtils;
+import com.wdx.utils.collection.ListUtil;
+import com.wdx.utils.file.PropertiesUtils;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPoolConfig;
@@ -33,6 +35,8 @@ import redis.clients.jedis.ScanResult;
 public class RedisCacheUtils {
 
 	private static final Logger logger = LoggerFactory.getLogger(RedisCacheUtils.class);
+	
+	private static String LOCK = "lock_";
 	
 	/**
 	 * k=v : 主机名=连接池
@@ -161,6 +165,33 @@ public class RedisCacheUtils {
 	 */
 	public static void setOneMonth(String key, String value) {
 		set(key, value, (60*60*24*30));
+	}
+	
+	/**
+	 * 如果不存在就设置进去
+	 *	@ReturnType	boolean 
+	 *	@Date	2018年9月21日	下午5:51:50
+	 *  @Param  @param key
+	 *  @Param  @param value
+	 *  @Param  @param seconds
+	 *  @Param  @return
+	 */
+	public static boolean setnx(String key, String value, int seconds){
+		Jedis jedis = null;
+		JedisSentinelPool pool = getPool(key);
+		try {
+			jedis = pool.getResource();
+			Long res = jedis.setnx(key, value);
+			if (res == 1L) {
+				jedis.expire(key, seconds);
+				return true;
+			}
+		} catch (Exception e) {
+			logger.error("redis set ===>", e);
+		} finally {
+			jedis.close();
+		}
+		return false;
 	}
 	
 	/**
@@ -569,6 +600,67 @@ public class RedisCacheUtils {
 			jedis.close();
 		}
 		return null;
+	}
+	
+	/**
+	 * 为redis中数据上锁
+	 *	@ReturnType	void 
+	 *	@Date	2018年9月21日	下午6:00:50
+	 *  @Param  @param key					数据的key
+	 *  @Param  @param timeout				超时时间（超时未获得锁会报异常）、锁存活最长时间。默认60s
+	 */
+	public static void lock(String key, Integer timeout){
+		if (key == null || "".equals(key.trim())) {
+			return;
+		}
+		if (timeout == null || timeout <= 0) {
+			timeout = 60;
+		}
+		// 初始时间
+		Instant start = Instant.now();
+		// 锁的key
+		String lockKey = LOCK + key;
+		try {
+			boolean lockStatus = false;
+			while (!lockStatus && (Duration.between(start, Instant.now()).toMillis() <= 1000 * timeout)) {
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+				}
+				// 尝试上锁
+				logger.info("redis...lock...try get lock->" + lockKey + ", wait->" + (Duration.between(start, Instant.now()).toMillis()) / 1000 + "s, max->" + timeout + "s");
+				lockStatus = setnx(lockKey, LOCK, timeout);
+			}
+			// 超时
+			if (!lockStatus) {
+				throw new RuntimeException("redis lock-> " + lockKey + " fail...timeout : " + timeout);
+			}
+			// 上锁成功
+			logger.info("redis...lock...get lock success->" + lockKey);
+		} catch (Exception e) {
+			logger.error("redis...lock...get error->" + lockKey, e);
+		}
+	}
+	
+	/**
+	 * 为redis中数据释放锁
+	 *	@ReturnType	void 
+	 *	@Date	2018年9月21日	下午6:00:41
+	 *  @Param  @param key				数据的key
+	 */
+	public static void unlock(String key){
+		if (key == null || "".equals(key.trim())) {
+			return;
+		}
+		// 锁的key
+		String lockKey = LOCK + key;
+		try {
+			// 释放锁
+			remove(lockKey);
+			logger.info("redis...unlock...unlock success->" + lockKey);
+		} catch (Exception e) {
+			logger.error("redis...unlock...get error->" + lockKey, e);
+		}
 	}
 	
 	/**

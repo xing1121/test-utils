@@ -1,4 +1,4 @@
-package com.wdx.utils;
+package com.wdx.utils.collection;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;

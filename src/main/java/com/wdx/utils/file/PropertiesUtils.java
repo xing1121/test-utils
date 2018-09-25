@@ -1,4 +1,4 @@
-package com.wdx.utils;
+package com.wdx.utils.file;
 
 import java.io.IOException;
 import java.io.InputStream;

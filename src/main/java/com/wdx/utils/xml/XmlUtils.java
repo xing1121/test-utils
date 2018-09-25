@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
-import com.wdx.utils.FileUtils;
+import com.wdx.utils.file.FileUtils;
 
 /**
  * 描述：xml工具类
