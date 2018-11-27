@@ -1,13 +1,13 @@
 package com.wdx.utils.sql;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.net.URL;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 描述：从文件中获取sql字符串
@@ -16,7 +16,7 @@ import org.apache.log4j.Logger;
  */
 public class MySqlUtils {
 
-	private final static Logger logger = Logger.getLogger(MySqlUtils.class);
+	private static Logger logger = LoggerFactory.getLogger(MySqlUtils.class);
 	
 	/**
 	 * 从类路径的文件中获取sql字符串
@@ -28,9 +28,11 @@ public class MySqlUtils {
 	public static MySql getSqlFromClassPath(String path){
 		BufferedReader br = null;
 		try {
+			logger.info("MySqlUtils...getSqlFromClassPath path:" + path);
+			// 读取输入流
+			InputStream is = MySqlUtils.class.getResourceAsStream(path);
 			// 读取文件流
-			URL resource = MySqlUtils.class.getResource(path);
-			br = new BufferedReader(new FileReader(new File(resource.getPath())));
+			br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
 			// 获取内容
 			StringBuffer sb = new StringBuffer();
 			String content = null;
@@ -75,9 +77,11 @@ public class MySqlUtils {
 	public static String getStringFromClassPath(String path){
 		BufferedReader br = null;
 		try {
+			logger.info("MySqlUtils...getSqlFromClassPath path:" + path);
+			// 读取输入流
+			InputStream is = MySqlUtils.class.getResourceAsStream(path);
 			// 读取文件流
-			URL resource = MySqlUtils.class.getResource(path);
-			br = new BufferedReader(new FileReader(new File(resource.getPath())));
+			br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
 			// 获取内容
 			StringBuffer sb = new StringBuffer();
 			String content = null;
