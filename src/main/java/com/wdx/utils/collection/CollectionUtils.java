@@ -18,9 +18,9 @@ import org.slf4j.LoggerFactory;
  * @author 80002888
  * @date   2018年6月21日
  */
-public class CollectionUtil {
+public class CollectionUtils {
 	
-	private static final Logger logger = LoggerFactory.getLogger(CollectionUtil.class);
+	private static final Logger logger = LoggerFactory.getLogger(CollectionUtils.class);
 	
 	/**
 	 * 判断集合是否为空
@@ -31,6 +31,20 @@ public class CollectionUtil {
 	 */
 	public static <T> boolean isEmpty(Collection<T> coll){
 		if (coll == null || coll.size() == 0) {
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * 判断集合是否非空
+	 *	@ReturnType	boolean 
+	 *	@Date	2018年10月17日	下午2:53:49
+	 *  @Param  @param coll
+	 *  @Param  @return
+	 */
+	public static <T> boolean isNotEmpty(Collection<T> coll){
+		if (coll != null && coll.size() != 0) {
 			return true;
 		}
 		return false;
@@ -108,7 +122,7 @@ public class CollectionUtil {
 	 */
 	@SuppressWarnings("unchecked")
 	public static <T> List<T> subListRight(List<T> list, Integer fromIndex, Integer toIndex){
-		if (CollectionUtil.isEmpty(list)) {
+		if (CollectionUtils.isEmpty(list)) {
 			return null;
 		}
 		if (toIndex > list.size()) {
@@ -126,7 +140,7 @@ public class CollectionUtil {
 			for (int i = fromIndex; i < toIndex; i++) {
 				newList.add(list.get(i));
 			}
-			if (CollectionUtil.isEmpty(newList)) {
+			if (CollectionUtils.isEmpty(newList)) {
 				return null;
 			}
 			return newList;
@@ -182,11 +196,11 @@ public class CollectionUtil {
 	 */
 	@SuppressWarnings("unchecked")
 	public static <T> T[] listToArray(List<T> list){
-		if (CollectionUtil.isEmpty(list)) {
+		if (CollectionUtils.isEmpty(list)) {
 			return null;
 		}
 		list = list.stream().filter((x)->x!=null).collect(Collectors.toList());
-		if (CollectionUtil.isEmpty(list)) {
+		if (CollectionUtils.isEmpty(list)) {
 			return null;
 		}
 		Class<? extends Object> clazz = list.get(0).getClass();
@@ -202,7 +216,7 @@ public class CollectionUtil {
 	 *  @Param  @return
 	 */
 	public static <T> T[] setToArray(Set<T> set){
-		if (CollectionUtil.isEmpty(set)) {
+		if (CollectionUtils.isEmpty(set)) {
 			return null;
 		}
 		List<T> list = new ArrayList<>(set);

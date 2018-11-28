@@ -12,12 +12,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.wdx.utils.collection.ListUtil;
+import com.wdx.utils.collection.CollectionUtils;
 import com.wdx.utils.file.PropertiesUtils;
 
 import redis.clients.jedis.Jedis;
@@ -28,66 +27,61 @@ import redis.clients.jedis.ScanParams;
 import redis.clients.jedis.ScanResult;
 
 /**
- * 描述：RedisCacheUtils
+ * 描述：RedisUtil
  * @author 80002888
  * @date   2018年6月21日
  */
 public class RedisCacheUtils {
 
 	private static final Logger logger = LoggerFactory.getLogger(RedisCacheUtils.class);
-	
-	private static String LOCK = "lock_";
-	
-	/**
-	 * k=v : 主机名=连接池
-	 */
+
 	private static Map<String, JedisSentinelPool> poolMap;
 
 	/**
-	 * 存所有主机名
+	 * 默认为配置中最后一个redis服务器
 	 */
+	private static final JedisSentinelPool DEFAULT_POOL;
+	
 	private static String[] mastersArr;
 	
-	/**
-	 * 默认的连接池
-	 */
-	private static JedisSentinelPool defaultPool;
+	private static String LOCK = "lock_";
 	
 	/**
 	 * 初始化
 	 */
 	static {
 		JedisPoolConfig config = new JedisPoolConfig();
-		config.setMaxTotal(100);
-		config.setMaxIdle(10);
+		// 连接池中连接最大数量
+		config.setMaxTotal(200);
+		// 最大空闲连接数量
+		config.setMaxIdle(100);
+		// 获取连接最长等待时间ms
 		config.setMaxWaitMillis(100);
 		config.setTestOnBorrow(true);
 		config.setTestOnReturn(true);
+		config.setTestWhileIdle(true);
 
-		String jpassword = PropertiesUtils.getValue("/properties/application.properties", "redis_password");
+		String jpassword = PropertiesUtils.getValue("/config/application.properties", "redis_password");
 		
-		//超时时间（单位毫秒）
-		int timeout = Integer.parseInt(PropertiesUtils.getValue("/properties/application.properties", "redis_time"));	
+		//超时时间（单位毫秒，2.8以下即是连接超时时间，又是读写超时时间）
+		int timeout = Integer.parseInt(PropertiesUtils.getValue("/config/application.properties", "redis_time"));	
 
-		String masters = PropertiesUtils.getValue("/properties/application.properties", "redis_masters");
+		String masters = PropertiesUtils.getValue("/config/application.properties", "redis_masters");
 		mastersArr = masters.split(",");
 		int size = mastersArr.length;
 		
 		Set<String> sentinels = new HashSet<String>();
-		String sentinelsd = PropertiesUtils.getValue("/properties/application.properties", "redis_servers");
+		String sentinelsd = PropertiesUtils.getValue("/config/application.properties", "redis_servers");
 		String[] sentinelsArr = sentinelsd.split(",");
 		sentinels.addAll(Arrays.asList(sentinelsArr));
 		
 		poolMap = new HashMap<>();
 		for (int i = 0; i < size; i++) {
 			String masterName = mastersArr[i];
-			JedisSentinelPool pool = new JedisSentinelPool(masterName, sentinels, config, timeout, jpassword);
-			if (i == 0) {
-				defaultPool = pool;
-			}
-			poolMap.put(masterName, pool);
+			poolMap.put(masterName, new JedisSentinelPool(masterName, sentinels, config, timeout, jpassword));
 		}
-		
+
+		DEFAULT_POOL = new JedisSentinelPool(mastersArr[size-1], sentinels, config, timeout, jpassword);
 	}
 
 	/**
@@ -102,14 +96,100 @@ public class RedisCacheUtils {
 		Jedis jedis = null;
 		JedisSentinelPool pool = getPool(key);
 		try {
+			if (pool == null) {
+				pool = DEFAULT_POOL;
+			}
 			jedis = pool.getResource();
 			value = jedis.get(key);
 		} catch (Exception e) {
 			logger.error("redis get ===>", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 		return value;
+	}
+	
+	/**
+	 * 从redis获取数据
+	 *	@ReturnType	String 
+	 *	@Date	2018年1月23日	上午11:37:00
+	 *  @Param  @param key
+	 *  @Param  @param defaultValue		默认值
+	 *  @Param  @return
+	 */
+	public static String get(String key, String defaultValue) {
+		String value = null;
+		Jedis jedis = null;
+		JedisSentinelPool pool = getPool(key);
+		try {
+			if (pool == null) {
+				pool = DEFAULT_POOL;
+			}
+			jedis = pool.getResource();
+			value = jedis.get(key);
+		} catch (Exception e) {
+			logger.error("redis get ===>", e);
+		} finally {
+			closeJedis(jedis);
+		}
+		if (StringUtils.isBlank(value)) {
+			return defaultValue;
+		}
+		return value;
+	}
+	
+	/**
+	 * 从redis获取数据旧的值，并设置新的值。
+	 *	@ReturnType	String 
+	 *	@Date	2018年1月23日	上午11:37:00
+	 *  @Param  @param key
+	 *  @Param  @param value
+	 *  @Param  @return
+	 */
+	public static String getSet(String key, String value) {
+		String oldValue = null;
+		Jedis jedis = null;
+		JedisSentinelPool pool = getPool(key);
+		try {
+			if (pool == null) {
+				pool = DEFAULT_POOL;
+			}
+			jedis = pool.getResource();
+			oldValue = jedis.getSet(key, value);
+		} catch (Exception e) {
+			logger.error("redis get ===>", e);
+		} finally {
+			closeJedis(jedis);
+		}
+		return oldValue;
+	}
+	
+	/**
+	 * 从redis获取数据旧的值，并设置新的值，和生存时间
+	 *	@ReturnType	String 
+	 *	@Date	2018年1月23日	上午11:37:00
+	 *  @Param  @param key
+	 *  @Param  @param value
+	 *  @Param  @param seconds
+	 *  @Param  @return
+	 */
+	public static String getSet(String key, String value, int seconds) {
+		String oldValue = null;
+		Jedis jedis = null;
+		JedisSentinelPool pool = getPool(key);
+		try {
+			if (pool == null) {
+				pool = DEFAULT_POOL;
+			}
+			jedis = pool.getResource();
+			oldValue = jedis.getSet(key, value);
+			jedis.expire(key, seconds);
+		} catch (Exception e) {
+			logger.error("redis get ===>", e);
+		} finally {
+			closeJedis(jedis);
+		}
+		return oldValue;
 	}
 
 	/**
@@ -135,12 +215,15 @@ public class RedisCacheUtils {
 		Jedis jedis = null;
 		JedisSentinelPool pool = getPool(key);
 		try {
+			if (pool == null) {
+				pool = DEFAULT_POOL;
+			}
 			jedis = pool.getResource();
 			value = jedis.setex(key, seconds, value);
 		} catch (Exception e) {
 			logger.error("redis set ===>", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 		return;
 	}
@@ -180,6 +263,9 @@ public class RedisCacheUtils {
 		Jedis jedis = null;
 		JedisSentinelPool pool = getPool(key);
 		try {
+			if (pool == null) {
+				pool = DEFAULT_POOL;
+			}
 			jedis = pool.getResource();
 			Long res = jedis.setnx(key, value);
 			if (res == 1L) {
@@ -189,7 +275,7 @@ public class RedisCacheUtils {
 		} catch (Exception e) {
 			logger.error("redis set ===>", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 		return false;
 	}
@@ -205,12 +291,15 @@ public class RedisCacheUtils {
 		Jedis jedis = null;
 		JedisSentinelPool pool = getPool(key);
 		try {
+			if (pool == null) {
+				pool = DEFAULT_POOL;
+			}
 			jedis = pool.getResource();
 			jedis.expire(key, seconds);
 		} catch (Exception e) {
 			logger.error("redis set ===>", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 		return;
 	}
@@ -226,12 +315,15 @@ public class RedisCacheUtils {
 		Jedis jedis = null;
 		JedisSentinelPool pool = getPool(key);
 		try {
+			if (pool == null) {
+				pool = DEFAULT_POOL;
+			}
 			jedis = pool.getResource();
 			return jedis.exists(key);
 		} catch (Exception e) {
 			logger.error("redis set ===>", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 		return false;
 	}
@@ -248,12 +340,15 @@ public class RedisCacheUtils {
 		Jedis jedis = null;
 		JedisSentinelPool pool = getPool(key);
 		try {
+			if (pool == null) {
+				pool = DEFAULT_POOL;
+			}
 			jedis = pool.getResource();
 			seconds = jedis.ttl(key);
 		} catch (Exception e) {
 			logger.error("redis ttl ===>", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 		return seconds;
 	}
@@ -262,11 +357,11 @@ public class RedisCacheUtils {
 	 * 从redis获取keys
 	 *	@ReturnType	String 
 	 *	@Date	2018年1月23日	上午11:37:00
-	 *  @Param  @param key
+	 *  @Param  @param pattern			含通配符的字符串
 	 *  @Param  @return
 	 */
-	public static List<String> getKeys(String pattern) {
-		List<String> keys = new ArrayList<>();
+	public static Set<String> getKeys(String pattern) {
+		Set<String> keys = new HashSet<>();
 		Collection<JedisSentinelPool> pools = poolMap.values();
 		if (CollectionUtils.isEmpty(pools)) {
 			return null;
@@ -289,18 +384,19 @@ public class RedisCacheUtils {
 	 *	@Date	2018年1月23日	上午11:36:25
 	 *  @Param  @param key
 	 */
-	public static void remove(String key) {
+	public static long remove(String key) {
+		Long res = null;
 		Jedis jedis = null;
 		JedisSentinelPool pool = getPool(key);
 		try {
 			jedis = pool.getResource();
-			jedis.del(key);
+			res = jedis.del(key);
 		} catch (Exception e) {
 			logger.error("redis del ===> ", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
-		return;
+		return res == null ? 0 : res;
 	}
 
 	/**
@@ -346,7 +442,7 @@ public class RedisCacheUtils {
 			} catch (Exception e) {
 				logger.error("redis setBatch ===> ", e);
 			} finally {
-				jedis.close();
+				closeJedis(jedis);
 			}
 		}
 	}
@@ -371,11 +467,11 @@ public class RedisCacheUtils {
 				if (CollectionUtils.isEmpty(list)) {
 					continue;
 				}
-				total += jedis.del(ListUtil.listToArray(list));
+				total += jedis.del(CollectionUtils.listToArray(list));
 			} catch (Exception e) {
 				logger.error("redis del batch ===> ", e);
 			} finally {
-				jedis.close();
+				closeJedis(jedis);
 			}
 		}
 		return total;
@@ -402,7 +498,7 @@ public class RedisCacheUtils {
 				if (CollectionUtils.isEmpty(list)) {
 					continue;
 				}
-				List<String> values = jedis.mget(ListUtil.listToArray(list));
+				List<String> values = jedis.mget(CollectionUtils.listToArray(list));
 				if (CollectionUtils.isEmpty(values)) {
 					continue;
 				}
@@ -410,7 +506,7 @@ public class RedisCacheUtils {
 			} catch (Exception e) {
 				logger.error("redis getBatch ===> ", e);
 			} finally {
-				jedis.close();
+				closeJedis(jedis);
 			}
 		}
 		if (CollectionUtils.isEmpty(totalValues)) {
@@ -427,7 +523,7 @@ public class RedisCacheUtils {
 	 *  @Param  @param channel
 	 */
 	public static void subscribe(JedisPubSub jedisPubSub, String...channels){
-		if(defaultPool == null){
+		if(DEFAULT_POOL == null){
 			return;
 		}
 		if (jedisPubSub == null) {
@@ -438,12 +534,12 @@ public class RedisCacheUtils {
 		}
 		Jedis jedis = null;
 		try {
-			jedis = defaultPool.getResource();
+			jedis = DEFAULT_POOL.getResource();
 			jedis.subscribe(jedisPubSub, channels);
 		} catch (Exception e) {
 			logger.error("redis subscribe ===> ", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 	}
 	
@@ -455,7 +551,7 @@ public class RedisCacheUtils {
 	 *  @Param  @param message
 	 */
 	public static void publish(String channel, String message){
-		if(defaultPool == null){
+		if(DEFAULT_POOL == null){
 			return;
 		}
 		if (StringUtils.isBlank(channel) || StringUtils.isBlank(message)) {
@@ -463,12 +559,12 @@ public class RedisCacheUtils {
 		}
 		Jedis jedis = null;
 		try {
-			jedis = defaultPool.getResource();
+			jedis = DEFAULT_POOL.getResource();
 			jedis.publish(channel, message);
 		} catch (Exception e) {
 			logger.error("redis publish ===> ", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 	}
 	
@@ -488,8 +584,9 @@ public class RedisCacheUtils {
 		} catch (Exception e) {
 			logger.error("redis lpush ===> ", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
+		return;
 	}
 	
 	/**
@@ -508,8 +605,9 @@ public class RedisCacheUtils {
 		} catch (Exception e) {
 			logger.error("redis rpush ===> ", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
+		return;
 	}
 	
 	/**
@@ -529,7 +627,7 @@ public class RedisCacheUtils {
 		} catch (Exception e) {
 			logger.error("redis lpop ===> ", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 		return null;
 	}
@@ -550,8 +648,9 @@ public class RedisCacheUtils {
 		} catch (Exception e) {
 			logger.error("redis rpop ===> ", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
+		return;
 	}
 	
 	/**
@@ -573,7 +672,7 @@ public class RedisCacheUtils {
 		} catch (Exception e) {
 			logger.error("redis blpop ===> ", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 		return null;
 	}
@@ -597,13 +696,13 @@ public class RedisCacheUtils {
 		} catch (Exception e) {
 			logger.error("redis brpop ===> ", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 		return null;
 	}
 	
 	/**
-	 * 为redis中数据上锁
+	 * 使用redis实现分布式锁
 	 *	@ReturnType	void 
 	 *	@Date	2018年9月21日	下午6:00:50
 	 *  @Param  @param key					数据的key
@@ -621,15 +720,41 @@ public class RedisCacheUtils {
 		// 锁的key
 		String lockKey = LOCK + key;
 		try {
+			// 是否获取锁成功
 			boolean lockStatus = false;
-			while (!lockStatus && (Duration.between(start, Instant.now()).toMillis() <= 1000 * timeout)) {
+			// 循环timeout秒
+			while (Duration.between(start, Instant.now()).toMillis() <= 1000 * timeout) {
+				logger.info("redis...lock...try get lock->" + lockKey + ", wait->" + (Duration.between(start, Instant.now()).toMillis()) / 1000 + "s, max->" + timeout + "s");
+				// 锁的过期时间
+				long expireTime = (System.currentTimeMillis() + (timeout * 1000));
+				// 尝试上锁
+				lockStatus = setnx(lockKey, String.valueOf(expireTime), timeout);
+				// 上锁成功，跳出循环
+				if (lockStatus) {
+					break;
+				}
+				// 上锁失败，可能是锁被别的地方抢走，或者死锁（生存时间永久，这种需要以下判断时间）
+				// 先获取，看是否存在这个锁，存在则获取之前的过期时间
+				long oldExpireTime = Long.parseLong(get(lockKey, "0"));
+				// 如果锁中的过期时间小于当前系统时间，超时，可以允许别的请求重新获取
+				if (oldExpireTime < System.currentTimeMillis()) {
+					// 计算新的过期时间
+					long newExpireTime = (System.currentTimeMillis() + (timeout * 1000));
+					// 尝试获取当前锁中的生存时间，并设置新的过期时间进去
+					String v = getSet(lockKey, String.valueOf(newExpireTime), timeout);
+					long currentExpireTime = Long.parseLong(StringUtils.isBlank(v)? "0" : v);
+					// 如果当前锁中的生存时间和之前获取的一致，说明没有被人设置过
+					if (currentExpireTime == oldExpireTime) {
+						// 上锁成功
+						lockStatus = true;
+						// 跳出循环
+						break;
+					}
+				}
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {
 				}
-				// 尝试上锁
-				logger.info("redis...lock...try get lock->" + lockKey + ", wait->" + (Duration.between(start, Instant.now()).toMillis()) / 1000 + "s, max->" + timeout + "s");
-				lockStatus = setnx(lockKey, LOCK, timeout);
 			}
 			// 超时
 			if (!lockStatus) {
@@ -643,7 +768,7 @@ public class RedisCacheUtils {
 	}
 	
 	/**
-	 * 为redis中数据释放锁
+	 * redis释放锁
 	 *	@ReturnType	void 
 	 *	@Date	2018年9月21日	下午6:00:41
 	 *  @Param  @param key				数据的key
@@ -656,18 +781,14 @@ public class RedisCacheUtils {
 		String lockKey = LOCK + key;
 		try {
 			// 释放锁
-			remove(lockKey);
+			Long res = remove(lockKey);
+			if (res == null || res == 0) {
+				return;
+			}
 			logger.info("redis...unlock...unlock success->" + lockKey);
 		} catch (Exception e) {
 			logger.error("redis...unlock...get error->" + lockKey, e);
 		}
-	}
-	
-	/**
-	 * 销毁连接池 
-	 */
-	public static void destroyPool(){
-		poolMap.values().forEach((x)->x.destroy());
 	}
 	
 	/******************************************************************************/
@@ -675,47 +796,48 @@ public class RedisCacheUtils {
 	/**
 	 * 根据key获取JedisSentinelPool
 	 *	@ReturnType	JedisSentinelPool 
-	 *	@Date	2018年9月20日	下午4:53:42
+	 *	@Date	2018年10月15日	下午3:30:20
 	 *  @Param  @param key
 	 *  @Param  @return
 	 */
-	private static JedisSentinelPool getPool(String key){
+	protected static JedisSentinelPool getPool(String key){
+		if (StringUtils.isBlank(key)) {
+			return DEFAULT_POOL;
+		}
 		// 按HashCode
 		int index = Math.abs(key.hashCode() % mastersArr.length);
-		// 根据key获取主机名
 		String masterName = mastersArr[index];
-		// 根据主机名称获取 JedisSentinelPool
 		JedisSentinelPool pool = getPoolByMasterName(masterName);
+		if (pool == null) {
+			return DEFAULT_POOL;
+		}
 		return pool;
 	}
 	
 	/**
 	 * 根据主机名称获取 JedisSentinelPool
-	 *	@ReturnType	JedisSentinelPool 
-	 *	@Date	2018年9月20日	下午4:53:33
-	 *  @Param  @param masterName
-	 *  @Param  @return
 	 */
-	private static JedisSentinelPool getPoolByMasterName(String masterName){
+	protected static JedisSentinelPool getPoolByMasterName(String masterName){
 		if (StringUtils.isBlank(masterName)) {
 			return null;
 		}
 		JedisSentinelPool pool = poolMap.get(masterName);
-		if (pool == null) {
-			return defaultPool;
-		}
 		return pool;
 	}
 	
 	/**
-	 * 根据通配符从指定redis服务器查询keys，使用scan命令代替jedis.keys(pattern)
-	 *	@ReturnType	Collection<String> 
-	 *	@Date	2018年9月20日	下午4:53:28
-	 *  @Param  @param pattern
-	 *  @Param  @param pool
-	 *  @Param  @return
+	 * 关闭jedis连接
 	 */
-	private static Collection<String> getKeysFromOnePool(String pattern, JedisSentinelPool pool){
+	protected static void closeJedis(Jedis jedis) {
+		if (jedis != null) {
+			jedis.close();
+		}
+	}
+	
+	/**
+	 * 根据通配符从指定redis服务器查询keys，使用scan命令代替jedis.keys(pattern)
+	 */
+	protected static Set<String> getKeysFromOnePool(String pattern, JedisSentinelPool pool){
 		Jedis jedis = null;
 		Set<String> keys = null;
 		String startCursor = "0";
@@ -723,6 +845,7 @@ public class RedisCacheUtils {
 			jedis = pool.getResource();
 			keys = new HashSet<>();
 			String cursor = startCursor;
+			Instant start = Instant.now();
 			do {
 				ScanResult<String> scanResult = jedis.scan(cursor, new ScanParams().count(1000).match(pattern));
 				List<String> results = scanResult.getResult();
@@ -731,11 +854,11 @@ public class RedisCacheUtils {
 					continue;
 				}
 				keys.addAll(new HashSet<>(results));
-			} while (!startCursor.equals(cursor));
+			} while (!startCursor.equals(cursor) && (Duration.between(start, Instant.now()).toMillis()<=1000*60));
 		} catch (Exception e) {
-			logger.error("redis getKeysFromOnePool===>", e);
+			logger.error("redis get ===>", e);
 		} finally {
-			jedis.close();
+			closeJedis(jedis);
 		}
 		if (CollectionUtils.isEmpty(keys)) {
 			return null;
@@ -743,4 +866,16 @@ public class RedisCacheUtils {
 		return keys;
 	}
 
+	public static JedisSentinelPool getDefaultPool(){
+		return DEFAULT_POOL;
+	}
+	
+	/**
+	 * 销毁连接池 
+	 */
+	public static void destroyPool(){
+		poolMap.values().forEach((x)->x.destroy());
+		DEFAULT_POOL.destroy();
+	}
+	
 }
