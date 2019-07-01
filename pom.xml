@@ -92,6 +92,13 @@
 			<artifactId>shiro-core</artifactId>
 			<version>1.3.2</version>
 		</dependency>
+		
+		<!-- poi -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>3.9</version>
+		</dependency>
 
 	</dependencies>
 
