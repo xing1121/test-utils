@@ -1,6 +1,7 @@
 package com.wdx.utils.sql;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -109,6 +110,20 @@ public class MySql {
 		// 时间日期
 		if (obj instanceof Date) {
 			return "'" + DateUtil.date2Str((Date)obj, "yyyy-MM-dd HH:mm:ss") + "'";
+		}
+		// 集合
+		if (obj instanceof Collection<?>) {
+			int size = ((Collection<?>) obj).size();
+			StringBuilder strB = new StringBuilder("(");
+			if (obj instanceof Collection<?> && size != 0) {
+				for (Object object : ((Collection<?>) obj)) {
+					String singleValue = getRealValueFromObj(object);
+					strB.append(singleValue);
+					strB.append(", ");
+				}
+			}
+			strB.append(")"); 
+			return strB.toString().replace(", )", ")");
 		}
 		return "'" + obj.toString() + "'";
 	}

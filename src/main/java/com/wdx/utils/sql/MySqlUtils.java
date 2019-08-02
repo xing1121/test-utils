@@ -18,6 +18,25 @@ public class MySqlUtils {
 
 	private static Logger logger = LoggerFactory.getLogger(MySqlUtils.class);
 	
+	
+	/**
+	 * 从类路径的文件中获取sql字符串，后面是参数
+	 *	@ReturnType	String 
+	 *	@Date	2019年1月8日	下午2:35:16
+	 *  @Param  @param path		路径
+	 *  @Param  @param args		参数
+	 *  @Param  @return
+	 */
+	public static String getSqlFromClassPath(String path, Object...args){
+		MySql mySql = getSqlFromClassPath(path);
+        if (args != null && args.length > 0) {
+            for (int i = 0; i < args.length; i++) {
+                mySql.setParameter(i, args[i]);
+            }
+        }
+		return mySql.getSqlStr();
+	}
+	
 	/**
 	 * 从类路径的文件中获取sql字符串
 	 *	@ReturnType	String 
