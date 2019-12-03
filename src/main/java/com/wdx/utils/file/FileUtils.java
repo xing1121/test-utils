@@ -1,11 +1,14 @@
 package com.wdx.utils.file;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.LineNumberReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -18,6 +21,12 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.wdx.utils.sql.MySqlUtils;
+
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.lang.Assert;
 
 /**
  * 描述：文件工具类
@@ -33,6 +42,96 @@ public class FileUtils {
 	 */
 	private static final Integer DEL_FAILED_MAX_TIME = 10;
 	
+	/**
+	 * 从类路径的文件中获取字符串
+	 *	@ReturnType	String 
+	 *	@Date	2019年12月3日	上午11:32:26
+	 *  @Param  @param path
+	 *  @Param  @return
+	 */
+    public static String getStringFromClassPath3(String path){
+    	Assert.notBlank(path, "path is null");
+    	logger.info("path:" + path);
+        String filePath = FileUtils.class.getResource(path).getPath();
+        return FileUtil.readString(filePath, StandardCharsets.UTF_8);
+    }
+	
+	/**
+	 * 从类路径的文件中获取字符串
+	 *	@ReturnType	String 
+	 *	@Date	2019年12月3日	上午11:32:26
+	 *  @Param  @param path
+	 *  @Param  @return
+	 */
+    public static String getStringFromClassPath2(String path){
+    	Assert.notBlank(path, "path is null");
+    	logger.info("path:" + path);
+    	InputStream is = null;
+    	try {
+			if (path.startsWith("/")) {
+				// 路径加'/'
+				is = FileUtils.class.getResourceAsStream(path);
+			} else {
+				// 路径不加'/'
+				is = FileUtils.class.getClassLoader().getResourceAsStream(path);
+			}
+			return IoUtil.read(is, StandardCharsets.UTF_8);
+		} catch (Exception e) {
+			logger.error("get error->", e);
+		} finally {
+			if (is != null) {
+				try {
+					is.close();
+				} catch (Exception e) {
+					logger.error("get error->", e);
+				}
+			}
+		}
+    	return null;
+    }
+    
+	/**
+	 * 从类路径的文件中获取字符串
+	 *	@ReturnType	String 
+	 *	@Date	2018年11月27日	上午11:47:35
+	 *  @Param  @param path
+	 *  @Param  @return
+	 */
+	public static String getStringFromClassPath(String path){
+		BufferedReader br = null;
+		try {
+			logger.info("path:" + path);
+			// 读取输入流
+			InputStream is = MySqlUtils.class.getResourceAsStream(path);
+			// 读取文件流
+			br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+			// 获取内容
+			StringBuffer sb = new StringBuffer();
+			String content = null;
+			while ((content = br.readLine())!=null) {
+				sb.append(content);
+				sb.append("\n");
+			}
+			content = sb.toString();
+			if (StringUtils.isBlank(content)) {
+				return null;
+			}
+			return content;
+		} catch (Exception e) {
+			logger.error("get error->" + path, e);
+		} finally {
+			// 关闭流
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					logger.error("get error->", e);
+				}
+			}
+		}
+		return null;
+	}
+    
 	/**
 	 * 字符串写入文件（覆盖原有）
 	 *	@ReturnType	void 

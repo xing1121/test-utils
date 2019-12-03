@@ -86,46 +86,4 @@ public class MySqlUtils {
 		return null;
 	}
 	
-	/**
-	 * 从类路径的文件中获取字符串
-	 *	@ReturnType	String 
-	 *	@Date	2018年11月27日	上午11:47:35
-	 *  @Param  @param path
-	 *  @Param  @return
-	 */
-	public static String getStringFromClassPath(String path){
-		BufferedReader br = null;
-		try {
-			logger.info("MySqlUtils...getSqlFromClassPath path:" + path);
-			// 读取输入流
-			InputStream is = MySqlUtils.class.getResourceAsStream(path);
-			// 读取文件流
-			br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
-			// 获取内容
-			StringBuffer sb = new StringBuffer();
-			String content = null;
-			while ((content = br.readLine())!=null) {
-				sb.append(content);
-				sb.append("\n");
-			}
-			content = sb.toString();
-			if (StringUtils.isBlank(content)) {
-				return null;
-			}
-			return content;
-		} catch (Exception e) {
-			logger.error("get error->" + path, e);
-		} finally {
-			// 关闭流
-			if (br != null) {
-				try {
-					br.close();
-				} catch (IOException e) {
-					logger.error("get error->", e);
-				}
-			}
-		}
-		return null;
-	}
-	
 }
