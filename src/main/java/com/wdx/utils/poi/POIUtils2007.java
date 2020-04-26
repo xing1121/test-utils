@@ -234,18 +234,19 @@ public class POIUtils2007 {
 			fields = (Field[]) Array.newInstance(Field.class, list.size());
 			list.toArray(fields);
 			/***************************************************************/
-			// 创建第一行，放列名字
+			// 创建第一行，放列头
 			Row headRow = sheet.createRow(0);
+			// 列头的单元格样式
+			CellStyle headCellStyle = workbook.createCellStyle();
+			DataFormat format = workbook.createDataFormat();
+			headCellStyle.setDataFormat(format.getFormat("@"));
+			headCellStyle.setAlignment(CellStyle.ALIGN_CENTER);
 			if (headers != null && headers.size() == fields.length) {
 				for (int i = 0; i < headers.size(); i++) {
 					Cell cell = headRow.createCell(i);
 					cell.setCellType(Cell.CELL_TYPE_STRING);
 					cell.setCellValue(headers.get(i));
-					CellStyle cellStyle = workbook.createCellStyle();
-					DataFormat format = workbook.createDataFormat();
-					cellStyle.setDataFormat(format.getFormat("@"));
-					cellStyle.setAlignment(CellStyle.ALIGN_CENTER);
-					cell.setCellStyle(cellStyle);
+					cell.setCellStyle(headCellStyle);
 				}
 			} else {
 				for (int i = 0; i < fields.length; i++) {
@@ -253,14 +254,13 @@ public class POIUtils2007 {
 					Cell cell = headRow.createCell(i);
 					cell.setCellType(Cell.CELL_TYPE_STRING);
 					cell.setCellValue(fields[i].getName().toString());
-					CellStyle cellStyle = workbook.createCellStyle();
-					DataFormat format = workbook.createDataFormat();
-					cellStyle.setDataFormat(format.getFormat("@"));
-					cellStyle.setAlignment(CellStyle.ALIGN_CENTER);
-					cell.setCellStyle(cellStyle);
+					cell.setCellStyle(headCellStyle);
 				}
 			}
 			/***************************************************************/
+			// 数据的的单元格样式
+			CellStyle dataCellStyle = workbook.createCellStyle();
+			dataCellStyle.setAlignment(CellStyle.ALIGN_CENTER);
 			// 其余的行放数据
 			for (int i = 0; i < sourceList.size(); i++) {
 				Row bodyRow = sheet.createRow(i + 1);
@@ -284,13 +284,10 @@ public class POIUtils2007 {
 					
 					// 创建单元格
 					Cell cell = bodyRow.createCell(j);
-					// 创建单元格样式
-					CellStyle cellStyle = workbook.createCellStyle();
-					cellStyle.setAlignment(CellStyle.ALIGN_CENTER);
 					// 创建数据格式化对象
 					DataFormat dataFormat = workbook.createDataFormat();
 					// 设置值
-					setCellValue(fieldClass, value, cell, cellStyle, dataFormat);
+					setCellValue(fieldClass, value, cell, dataCellStyle, dataFormat);
 				}
 			}
 			/***************************************************************/
