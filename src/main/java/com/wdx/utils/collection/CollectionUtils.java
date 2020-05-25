@@ -8,10 +8,17 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.apache.http.util.Asserts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import cn.hutool.core.thread.NamedThreadFactory;
 
 /**
  * 描述：处理集合类
@@ -22,6 +29,105 @@ public class CollectionUtils {
 	
 	private static final Logger logger = LoggerFactory.getLogger(CollectionUtils.class);
 	
+	/**
+     * 按最大size拆分为子集合（实际为索引截取）并异步执行consumer
+     * 如： 
+     * 	集合大小：30 拆分大小：12 返回：3个集合，大小：12、12、6 
+     * 	集合大小：30 拆分大小：4 返回：8个集合，大小：4、4、4、4、4、4、4、2 
+     * 	集合大小：8 拆分大小：20
+     * 
+     * @ReturnType List<List<T>>
+     * @Date 2018年10月17日 下午2:48:51
+     * @Param @param list
+     * @Param @param size 		每个集合最大size
+     * @Param @param consumer 	每个子集合要执行的函数
+     * @Param @return
+     */
+    public static <T, R> void splitListExecuteAsync(List<T> list, int size, final Consumer<List<T>> consumer) {
+        Asserts.notNull(list, "list is null");
+        Asserts.notNull(consumer, "consumer is null");
+		long startTime = System.currentTimeMillis();
+        int start = 0;
+        int round = 1;
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(
+        		5, 
+        		100, 
+        		1, 
+        		TimeUnit.SECONDS, 
+        		new LinkedBlockingQueue<>(10), 
+        		new NamedThreadFactory("splitListExecuteAsyncThread", false), 
+        		new ThreadPoolExecutor.CallerRunsPolicy());
+        do {
+        	int end = 0;
+            if (start + size > list.size() - 1) {
+            	end = list.size();
+            } else {
+            	end = start + size;
+            }
+            final List<T> sonList = list.subList(start, end);
+			try {
+				logger.info(consumer + " round " + round);
+				executor.execute(()->{
+					consumer.accept(sonList);
+				});
+			} catch (Exception e) {
+				logger.info("get error->" + consumer, e);
+			}
+            start = start + size;
+            round ++;
+        } while (start < list.size());
+        
+    	while (true) {
+    		if (executor.getActiveCount() <= 0) {
+    			executor.shutdown();
+    			break;
+    		}
+		}
+		long endTime = System.currentTimeMillis();
+		logger.info("execute over, waste(s):" + (endTime-startTime)/1000);
+    }
+    
+    /**
+     * 按最大size拆分为子集合（实际为索引截取）并执行consumer
+     * 如： 
+     * 	集合大小：30 拆分大小：12 返回：3个集合，大小：12、12、6 
+     * 	集合大小：30 拆分大小：4 返回：8个集合，大小：4、4、4、4、4、4、4、2 
+     * 	集合大小：8 拆分大小：20
+     * 
+     * @ReturnType List<List<T>>
+     * @Date 2018年10月17日 下午2:48:51
+     * @Param @param list
+     * @Param @param size 		每个集合最大size
+     * @Param @param consumer 	每个子集合要执行的函数
+     * @Param @return
+     */
+    public static <T, R> void splitListExecute(List<T> list, int size, Consumer<List<T>> consumer) {
+        Asserts.notNull(list, "list is null");
+        Asserts.notNull(consumer, "consumer is null");
+		long startTime = System.currentTimeMillis();
+        int start = 0;
+        int round = 1;
+        do {
+        	int end = 0;
+            if (start + size > list.size() - 1) {
+            	end = list.size();
+            } else {
+            	end = start + size;
+            }
+            List<T> sonList = list.subList(start, end);
+			try {
+				logger.info(consumer + " round " + round);
+				consumer.accept(sonList);
+			} catch (Exception e) {
+				logger.info("get error->" + consumer, e);
+			}
+            start = start + size;
+            round ++;
+        } while (start < list.size());
+		long endTime = System.currentTimeMillis();
+		logger.info("execute over, waste(s):" + (endTime-startTime)/1000);
+    }
+    
 	/**
 	 * 判断集合是否为空
 	 *	@ReturnType	boolean 
