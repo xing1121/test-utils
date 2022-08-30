@@ -22,7 +22,7 @@ import cn.hutool.core.thread.NamedThreadFactory;
 
 /**
  * 描述：处理集合类
- * @author 80002888
+ * @author 80002888 wdx
  * @date   2018年6月21日
  */
 public class CollectionUtils {
